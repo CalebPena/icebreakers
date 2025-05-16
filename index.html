@@ -78,7 +78,7 @@
                         <option value="Professional">Professional</option>
                         <option value="Casual">Casual</option>
                         <option value="Fast">Fast</option>
-                    </select>
+                        <option value="Activity">Activity</option> </select>
                 </div>
             </div>
             <button id="addItemBtn"
@@ -95,7 +95,7 @@
                 <option value="Professional">Professional</option>
                 <option value="Casual">Casual</option>
                 <option value="Fast">Fast</option>
-            </select>
+                <option value="Activity">Activity</option> </select>
         </div>
 
         <div id="itemList" class="space-y-4">
@@ -190,29 +190,26 @@
 
             sortedItems.forEach(item => {
                 const itemDiv = document.createElement('div');
-                // MODIFIED: Changed flex layout to vertical, added space-y-2 for spacing between content and controls
                 itemDiv.className = 'item bg-white p-4 rounded-lg shadow-md flex flex-col space-y-3'; 
                 itemDiv.dataset.id = item.id;
 
                 // Item content (text and category)
                 const contentDiv = document.createElement('div');
-                contentDiv.className = 'w-full'; // Make content div take full width
+                contentDiv.className = 'w-full'; 
                 
                 const textEl = document.createElement('p');
-                // MODIFIED: Changed text-lg to text-base for smaller font
                 textEl.className = 'text-base font-medium text-gray-800 item-text-display'; 
                 textEl.textContent = item.text;
                 contentDiv.appendChild(textEl);
 
                 const categoryEl = document.createElement('p');
-                categoryEl.className = 'text-sm text-gray-500 mt-1'; // Added a little top margin
+                categoryEl.className = 'text-sm text-gray-500 mt-1'; 
                 categoryEl.textContent = item.category;
                 contentDiv.appendChild(categoryEl);
-                itemDiv.appendChild(contentDiv); // Add content to item card
+                itemDiv.appendChild(contentDiv); 
 
                 // Score and controls
                 const controlsDiv = document.createElement('div');
-                // MODIFIED: Centered controls, added padding-top for separation
                 controlsDiv.className = 'w-full flex items-center justify-center space-x-3 pt-3 border-t border-gray-200 mt-2'; 
 
                 const scoreEl = document.createElement('span');
@@ -241,7 +238,7 @@
                 controlsDiv.appendChild(scoreEl);
                 controlsDiv.appendChild(downArrowBtn);
                 controlsDiv.appendChild(deleteBtn); 
-                itemDiv.appendChild(controlsDiv); // Add controls to item card, now at the bottom
+                itemDiv.appendChild(controlsDiv); 
 
                 itemDiv.addEventListener('mouseleave', () => {
                     if (sortIsPending && lastManuallyUpdatedItemId === item.id) {
