@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Sortable List</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6; /* Light gray background */
+        }
+        .item {
+            transition: transform 0.3s ease-out, box-shadow 0.3s ease-out;
+        }
+        .item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .arrow-btn {
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+        }
+        .arrow-btn:hover {
+            background-color: #e5e7eb; /* Lighter gray on hover */
+        }
+        .arrow-btn:active {
+            transform: scale(0.95);
+        }
+        /* Custom scrollbar for better aesthetics (optional) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; /* Tailwind gray-400 */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; /* Tailwind gray-500 */
+        }
+        /* Ensure select dropdown arrow is visible */
+        select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.5rem center;
+            background-repeat: no-repeat;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+        }
+        /* Style for the textarea to preserve whitespace and wrap text */
+        .item-text-display {
+            white-space: pre-wrap; /* Preserves newlines and spaces, wraps text */
+            word-break: break-word; /* Ensures long words don't overflow */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-8 px-4">
+
+    <div class="w-full max-w-2xl bg-white shadow-xl rounded-lg p-6 md:p-8">
+        <div class="mb-8 p-6 bg-gray-50 rounded-lg shadow">
+            <div class="space-y-4 mb-4">
+                <div>
+                    <label for="itemText" class="block text-sm font-medium text-gray-700 mb-1">Item Text</label>
+                    <textarea id="itemText" placeholder="Enter item description" rows="3"
+                              class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out"></textarea>
+                </div>
+                <div>
+                    <label for="itemCategory" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select id="itemCategory"
+                            class="w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out bg-white">
+                        <option value="Professional">Professional</option>
+                        <option value="Casual">Casual</option>
+                    </select>
+                </div>
+            </div>
+            <button id="addItemBtn"
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                Add Item
+            </button>
+        </div>
+
+        <div class="mb-6">
+            <label for="filterCategory" class="block text-sm font-medium text-gray-700 mb-1">Filter by Category</label>
+            <select id="filterCategory"
+                    class="w-full md:w-1/2 px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 ease-in-out bg-white">
+                <option value="All">All Categories</option>
+                <option value="Professional">Professional</option>
+                <option value="Casual">Casual</option>
+            </select>
+        </div>
+
+        <div id="itemList" class="space-y-4">
+            </div>
+
+        <div id="emptyMessage" class="text-center text-gray-500 py-8 hidden">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-medium text-gray-900">No items yet</h3>
+            <p class="mt-1 text-sm text-gray-500">Get started by adding a new item above or adjust your filter.</p>
+        </div>
+
+    </div>
+
+    <script>
+        // DOM Elements
+        const itemTextEl = document.getElementById('itemText');
+        const itemCategoryEl = document.getElementById('itemCategory');
+        const addItemBtn = document.getElementById('addItemBtn');
+        const itemListEl = document.getElementById('itemList');
+        const emptyMessageEl = document.getElementById('emptyMessage');
+        const filterCategoryEl = document.getElementById('filterCategory'); // New filter dropdown
+
+        // Local storage key
+        const STORAGE_KEY = 'interactiveListItems';
+        const FILTER_STORAGE_KEY = 'interactiveListFilter'; // For storing filter preference
+
+        // Application state
+        let items = [];
+        let sortIsPending = false; 
+        let lastManuallyUpdatedItemId = null; 
+        let currentFilter = 'All'; // Default filter
+
+        // --- Core Functions ---
+
+        function loadItems() {
+            const storedItems = localStorage.getItem(STORAGE_KEY);
+            if (storedItems) {
+                items = JSON.parse(storedItems);
+            }
+            const storedFilter = localStorage.getItem(FILTER_STORAGE_KEY);
+            if (storedFilter) {
+                currentFilter = storedFilter;
+                filterCategoryEl.value = currentFilter; // Set dropdown to stored filter
+            }
+        }
+
+        function saveItems() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+        }
+
+        function saveFilterPreference() {
+            localStorage.setItem(FILTER_STORAGE_KEY, currentFilter);
+        }
+
+
+        function renderItems() {
+            itemListEl.innerHTML = '';
+
+            // Filter items based on currentFilter
+            const itemsToDisplay = items.filter(item => {
+                if (currentFilter === 'All') {
+                    return true;
+                }
+                return item.category === currentFilter;
+            });
+
+            if (itemsToDisplay.length === 0) {
+                emptyMessageEl.classList.remove('hidden');
+                // Modify empty message based on whether there are items overall or just no items matching filter
+                if (items.length > 0 && currentFilter !== 'All') {
+                    emptyMessageEl.querySelector('h3').textContent = `No items match "${currentFilter}"`;
+                     emptyMessageEl.querySelector('p').textContent = "Try a different filter or add new items.";
+                } else {
+                    emptyMessageEl.querySelector('h3').textContent = "No items yet";
+                    emptyMessageEl.querySelector('p').textContent = "Get started by adding a new item above.";
+                }
+                itemListEl.classList.add('hidden');
+                return;
+            }
+            
+            emptyMessageEl.classList.add('hidden');
+            itemListEl.classList.remove('hidden');
+
+            // Sort the filtered items
+            const sortedItems = [...itemsToDisplay].sort((a, b) => {
+                if (b.score !== a.score) {
+                    return b.score - a.score;
+                }
+                return a.text.localeCompare(b.text);
+            });
+
+            sortedItems.forEach(item => {
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'item bg-white p-4 rounded-lg shadow-md flex items-center justify-between space-x-4';
+                itemDiv.dataset.id = item.id;
+
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'flex-grow';
+                
+                const textEl = document.createElement('p');
+                textEl.className = 'text-lg font-medium text-gray-800 item-text-display'; 
+                textEl.textContent = item.text;
+                contentDiv.appendChild(textEl);
+
+                const categoryEl = document.createElement('p');
+                categoryEl.className = 'text-sm text-gray-500';
+                categoryEl.textContent = item.category;
+                contentDiv.appendChild(categoryEl);
+                itemDiv.appendChild(contentDiv);
+
+                const controlsDiv = document.createElement('div');
+                controlsDiv.className = 'flex items-center space-x-3';
+
+                const scoreEl = document.createElement('span');
+                scoreEl.className = 'text-xl font-semibold text-indigo-600 w-8 text-center';
+                scoreEl.textContent = item.score;
+                
+                const upArrowBtn = document.createElement('button');
+                upArrowBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7" /></svg>`;
+                upArrowBtn.className = 'arrow-btn p-1 rounded-full hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-green-400';
+                upArrowBtn.title = "Increase score";
+                upArrowBtn.addEventListener('click', () => updateScore(item.id, 1));
+                
+                const downArrowBtn = document.createElement('button');
+                downArrowBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>`;
+                downArrowBtn.className = 'arrow-btn p-1 rounded-full hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-400';
+                downArrowBtn.title = "Decrease score";
+                downArrowBtn.addEventListener('click', () => updateScore(item.id, -1));
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400 hover:text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>`;
+                deleteBtn.className = 'p-1 rounded-full focus:outline-none focus:ring-2 focus:ring-gray-400';
+                deleteBtn.title = "Delete item";
+                deleteBtn.addEventListener('click', () => deleteItem(item.id));
+
+                controlsDiv.appendChild(upArrowBtn);
+                controlsDiv.appendChild(scoreEl);
+                controlsDiv.appendChild(downArrowBtn);
+                controlsDiv.appendChild(deleteBtn); 
+                itemDiv.appendChild(controlsDiv);
+
+                itemDiv.addEventListener('mouseleave', () => {
+                    if (sortIsPending && lastManuallyUpdatedItemId === item.id) {
+                        setTimeout(() => {
+                            const itemStillHovered = document.querySelector(`.item[data-id='${item.id}']:hover`);
+                            if (!itemStillHovered) {
+                                renderItems(); 
+                                sortIsPending = false;
+                                lastManuallyUpdatedItemId = null;
+                            }
+                        }, 200); 
+                    }
+                });
+                itemListEl.appendChild(itemDiv);
+            });
+        }
+
+        function addItem() {
+            const text = itemTextEl.value.trim(); 
+            const category = itemCategoryEl.value;
+
+            if (!text) {
+                showModalAlert('Please enter item text.');
+                itemTextEl.focus();
+                return;
+            }
+            
+            const newItem = {
+                id: Date.now(), 
+                text: text,
+                category: category,
+                score: 0 
+            };
+
+            items.push(newItem);
+            saveItems();
+            
+            sortIsPending = false;
+            lastManuallyUpdatedItemId = null;
+            renderItems(); // Re-render to show new item respecting current filter
+
+            itemTextEl.value = '';
+            itemTextEl.focus(); 
+        }
+
+        function updateScore(itemId, change) {
+            const itemIndex = items.findIndex(item => item.id === itemId);
+            if (itemIndex > -1) {
+                items[itemIndex].score += change;
+                saveItems();
+
+                const itemElement = document.querySelector(`.item[data-id='${itemId}']`);
+                if (itemElement) {
+                    const scoreDisplayElement = itemElement.querySelector('.text-xl.font-semibold');
+                    if (scoreDisplayElement) {
+                        scoreDisplayElement.textContent = items[itemIndex].score;
+                    }
+                }
+                sortIsPending = true;
+                lastManuallyUpdatedItemId = itemId;
+                // If the item whose score is updated is currently visible,
+                // its score updates immediately. The list re-sorts on mouseleave.
+            }
+        }
+
+        function deleteItem(itemId) {
+            items = items.filter(item => item.id !== itemId);
+            saveItems();
+            sortIsPending = false; 
+            lastManuallyUpdatedItemId = null;
+            renderItems(); // Re-render to reflect deletion respecting current filter
+        }
+        
+        function showModalAlert(message) {
+            const existingModal = document.getElementById('customAlertModal');
+            if (existingModal) {
+                existingModal.remove();
+            }
+            const modal = document.createElement('div');
+            modal.id = 'customAlertModal';
+            modal.className = 'fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center z-50 px-4';
+            modal.innerHTML = `
+                <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm mx-auto">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Notification</h3>
+                    <p class="text-sm text-gray-700 mb-6">${message}</p>
+                    <div class="flex justify-end">
+                        <button id="customAlertOkButton" class="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                            OK
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            const okButton = document.getElementById('customAlertOkButton');
+            okButton.addEventListener('click', () => {
+                modal.remove();
+            });
+            okButton.focus();
+        }
+
+        // --- Event Listeners ---
+        addItemBtn.addEventListener('click', addItem);
+        
+        itemCategoryEl.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                addItem(); 
+            }
+        });
+
+        filterCategoryEl.addEventListener('change', (event) => {
+            currentFilter = event.target.value;
+            saveFilterPreference(); // Save the user's filter choice
+            renderItems(); // Re-render the list with the new filter
+        });
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadItems(); // Loads items and last used filter
+            renderItems(); 
+        });
+
+    </script>
+
+</body>
+</html>
